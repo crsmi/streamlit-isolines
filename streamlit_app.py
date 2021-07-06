@@ -5,7 +5,7 @@ import streamlit as st
 from streamlit_folium import folium_static
 import numpy as np
 import pandas as pd 
-import geopandas as gpd 
+# import geopandas as gpd 
 
 #import matplotlib.pyplot as plt
 #import plotly_express as px 
