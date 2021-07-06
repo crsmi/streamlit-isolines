@@ -68,7 +68,7 @@ def select_routing_mode():
 
 def select_origin_or_destination():
     st.header("Select Origin or Destination")
-    oord = st.radio("Origin or Destination",options=['Origin','Destination'],index=0)
+    oord = st.radio("Origin or Destination",options=['Origin','Destination'],index=1)
     return oord.lower()
     
 def select_date():
