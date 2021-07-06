@@ -7,4 +7,5 @@ dependencies:
   - geopandas
   - streamlit-folium
   - flexpolyline
+  - pygeos
 prefix: D:\Users\Collin\Anaconda3\envs\streamlit-isolines
