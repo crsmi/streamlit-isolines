@@ -1,0 +1,5 @@
+streamlit
+geopandas
+streamlit-folium
+flexpolyline
+pygeos
