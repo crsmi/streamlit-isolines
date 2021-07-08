@@ -1,5 +1,6 @@
 import time as tim
-# import base64
+import base64
+import tempfile
 
 import streamlit as st
 from streamlit_folium import folium_static
@@ -12,27 +13,60 @@ import pandas as pd
 
 # import os
 # import shutil
-# import zipfile
+import zipfile
 import isolines
 
 from datetime import time, date, timedelta, datetime
-# import json
+import json
 
 # import pathlib
 
 # import pickle
-# import pprint
-
+import pprint
+st.set_page_config(layout="wide",page_title="Isoline Calculation",page_icon=":world_map:",initial_sidebar_state="collapsed")
 here_api_key = st.secrets['here_api_key']
 
 
+# Code for google login
+import io
+import os
+import asyncio
 
-st.set_page_config(layout="wide",page_title="Isoline Calculation",page_icon=":world_map:",initial_sidebar_state="collapsed")
-_,center,_ = st.beta_columns([1,8,2])
-with center:
-    # st.title("Isochrone (Time Ring) Creation - Here Isoline Routing API v8")
-    st.markdown("Upload a CSV File with coordinate columns (Latitude & Longitude)")
+# For Gooogle Authentication
+from httpx_oauth.clients.google import GoogleOAuth2
 
+# For download button
+import re
+import uuid
+
+
+async def write_authorization_url(client,
+                                  redirect_uri):
+    authorization_url = await client.get_authorization_url(
+        redirect_uri,
+        scope=["profile", "email"],
+        extras_params={"access_type": "offline"},
+    )
+    return authorization_url
+
+
+async def write_access_token(client,
+                             redirect_uri,
+                             code):
+    token = await client.get_access_token(code, redirect_uri)
+    return token
+
+
+async def get_email(client,
+                    token):
+    user_id, user_email = await client.get_id_email(token)
+    return user_id, user_email
+
+
+
+
+
+# Original Code
 def create_coordinate_column(df):
     st.header("Select Coordinate Columns")
     st.info("Select latitude and longitude columns")
@@ -93,7 +127,7 @@ def select_time_rings():
     st.info("Select Time Rings (in minutes), separated by commas. (Max 540 mins)")
     time_rings = st.text_input("e.g. 5,10,15,30",value='5')         
     time_range_secs = ','.join([str(int(float(x)*60)) for x in time_rings.split(',')])
-    st.write(time_range_secs)
+    st.write("In Seconds: " + time_range_secs)
     return time_range_secs
 
 
@@ -132,6 +166,25 @@ def select_time_rings():
 
 #     href = f'<a href="data:file/zip;base64,{b64}">Download ZIP ShapeFile</a> (right-click and save as &lt;some_name&gt;.zip)'
 #     return href
+
+def download_zipshapefile(gdf, settings_dict,shp_name):
+    shp_name_full = f'{shp_name}-hereApi-isochrones-{date.today().strftime("%Y%m%d")}'
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        gdf.to_file(os.path.join(tmp_dir, f'{shp_name_full}.shp'), driver='ESRI Shapefile')
+        with open(f'{tmp_dir}/hereApi-settings.json','w') as f:
+            json.dump(settings_dict,f)
+        with open(f'{tmp_dir}/hereApi-settings.txt','a') as f:
+            f.write('Here API Settings\n')
+            f.write(pprint.pformat(settings_dict,indent=1))
+    
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, False) as zip_file:
+            for file in os.listdir(tmp_dir):
+                zip_file.write(os.path.join(tmp_dir, file), file)
+    # b64 = base64.b64encode(zip_buffer.getvalue()).decode()
+    # href = f'<a href="data:file/zip;base64,{b64}">Download ZIP ShapeFile</a> (right-click and save as &lt;some_name&gt;.zip)'
+    # return href
+    download_button(zip_buffer.getvalue(),f'{shp_name_full}.zip',"Download Shapefile")
     
 
 def get_isolines(coord_series,time_range_secs, oord='origin', heretime='2020-01-29T09:00:00',transport_mode='car',routing_mode='fast',optimize_for='balanced',max_points=None, api_version="v7"):
@@ -216,10 +269,16 @@ def combine_isoline_dfs(coord_series,df_list,label_series=None):
         col_order.insert(1,'label')
     return combined_list[col_order]
 
-def main():
+def main(user_id, user_email):
+
+    st.write(f"You're logged in as {user_email}")
+    # Original Code
+    _,center,_ = st.beta_columns([1,8,2])
     st.sidebar.title('Isochrone (Time Ring) Creation')
     apiVersion = st.sidebar.radio('Here API Version:',['v7','v8'],0)
     with center:
+        # st.title("Isochrone (Time Ring) Creation - Here Isoline Routing API v8")
+        st.markdown("Upload a CSV File with coordinate columns (Latitude & Longitude)")
         file = st.file_uploader("Choose a file") #width=25
     if file is not None:
         file.seek(0)
@@ -263,15 +322,14 @@ def main():
         heretime = day.strftime("%Y-%m-%d") + "T" + tod.strftime("%H:%M:%S")
         
         # Ask for shapefile name #TODO move this down below the creation
-        # TODO: Add this back in
-        # with col2:
-        #     shp_name = st.text_input("Shapefile Name",'shapefile')
-        #     if shp_name != '':
-        #         st.write(f'{shp_name}-hereApi-isochrones-{date.today().strftime("%Y%m%d")}')
+        with col2:
+            shp_name = st.text_input("Shapefile Name",'shapefile')
+            if shp_name != '':
+                st.write(f'{shp_name}-hereApi-isochrones-{date.today().strftime("%Y%m%d")}')
 
         # Allow running of catchments on first point only
         col2.header("Preview First Isoline")
-        preview = True, #TODO: Add this back in - col2.checkbox("Preview on first point only", value=True)
+        preview = col2.checkbox("Preview on first point only", value=True)
 
         submit_button = col2.button("Submit")
         if submit_button:                      
@@ -305,28 +363,28 @@ def main():
                 # st.write(isochrone_df)
                 folium_static(isolines.map_catchments(isochrone_df,start_loc=(coords.loc[0].split(','))))                
                 
-                # with st.spinner('Saving Data and Generating Download File...'):
-                #     # Combine Catchments
+                with st.spinner('Saving Data and Generating Download File...'):
+                    # Combine Catchments
                     
-                #     combined_catchments = combine_isoline_dfs(df_coords['latlon'],point_catchment_list,label_series)
-                #     #st.write(combined_catchments)
-                #     # num_points_list = combined_catchments.geometry.exterior.apply(lambda x: len(x.xy[0]) if x else 1)
-                #     # st.write(num_points_list)
-                #     # st.write(num_points_list.sum())
+                    combined_catchments = combine_isoline_dfs(df_coords['latlon'],point_catchment_list,label_series)
+                    # st.write(combined_catchments)
+                    # num_points_list = combined_catchments.geometry.exterior.apply(lambda x: len(x.xy[0]) if x else 1)
+                    # st.write(num_points_list)
+                    # st.write(num_points_list.sum())
 
-                #     # Temporary Save for Safety
-                #     # save_temp(combined_catchments, settings_dict, point_response_list)
+                    #Temporary Save for Safety
+                    #save_temp(combined_catchments, settings_dict, point_response_list)
 
-                #     #Download Shapefiles
-                #     # st.header("Download")
-                #     # download_shapefile(combined_catchments, settings_dict, shp_name)
-                #     #st.markdown(download_shapefile(combined_catchments, settings_dict, shp_name), unsafe_allow_html=True)
+                    #Download Shapefiles
+                    st.header("Download")
+                    download_zipshapefile(combined_catchments, settings_dict, shp_name)
+                    #st.markdown(download_zipshapefile(combined_catchments, settings_dict, shp_name), unsafe_allow_html=True)
             
 
-            # TODO: Show Response Info here
-            # with col2:                
-            #     with st.beta_expander("See response to first request."):
-            #         st.json(point_response_list[0][0].json())
+            #TODO: Show Response Info here
+            with col2:                
+                with st.beta_expander("See response to first request."):
+                    st.json(point_response_list[0][0].json())
 
 # def save_temp(df, settings, responses):
 #     # Save Settings
@@ -339,7 +397,149 @@ def main():
 #     df.to_pickle('tmp_save/tmp_df.pickle')
 #     with open(f'tmp_save/tmp_responses.pickle','wb') as f:
 #         pickle.dump(responses,f)        
-    
 
-if __name__ == "__main__":
-    main()
+def download_button(
+    object_to_download, download_filename, button_text  # , pickle_it=False
+):
+    """
+    Generates a link to download the given object_to_download.
+    
+    From: https://discuss.streamlit.io/t/a-download-button-with-custom-css/4220
+    Params:
+    ------
+    object_to_download:  The object to be downloaded.
+    download_filename (str): filename and extension of file. e.g. mydata.csv,
+    some_txt_output.txt download_link_text (str): Text to display for download
+    link.
+    button_text (str): Text to display on download button (e.g. 'click here to download file')
+    pickle_it (bool): If True, pickle file.
+    Returns:
+    -------
+    (str): the anchor tag to download object_to_download
+    Examples:
+    --------
+    download_link(your_df, 'YOUR_DF.csv', 'Click to download data!')
+    download_link(your_str, 'YOUR_STRING.txt', 'Click to download text!')
+    """
+    # if pickle_it:
+    #     try:
+    #         object_to_download = pickle.dumps(object_to_download)
+    #     except pickle.PicklingError as e:
+    #         st.write(e)
+    #         return None
+
+    # else:
+    #     if isinstance(object_to_download, bytes):
+    #         pass
+
+    #     elif isinstance(object_to_download, pd.DataFrame):
+    #         object_to_download = object_to_download.to_csv(index=False)
+
+    #     # Try JSON encode for everything else
+    #     else:
+    #         object_to_download = json.dumps(object_to_download)
+
+    try:
+        # some strings <-> bytes conversions necessary here
+        b64 = base64.b64encode(object_to_download.encode()).decode()
+    except AttributeError as e:
+        b64 = base64.b64encode(object_to_download).decode()
+
+    button_uuid = str(uuid.uuid4()).replace("-", "")
+    button_id = re.sub("\d+", "", button_uuid)
+
+    custom_css = f""" 
+        <style>
+            #{button_id} {{
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background-color: rgb(255, 255, 255);
+                color: rgb(38, 39, 48);
+                padding: .25rem .75rem;
+                position: relative;
+                text-decoration: none;
+                border-radius: 4px;
+                border-width: 1px;
+                border-style: solid;
+                border-color: rgb(230, 234, 241);
+                border-image: initial;
+            }} 
+            #{button_id}:hover {{
+                border-color: rgb(246, 51, 102);
+                color: rgb(246, 51, 102);
+            }}
+            #{button_id}:active {{
+                box-shadow: none;
+                background-color: rgb(246, 51, 102);
+                color: white;
+                }}
+        </style> """
+
+    dl_link = (
+        custom_css
+        + f'<a download="{download_filename}" id="{button_id}" href="data:file/txt;base64,{b64}">{button_text}</a><br><br>'
+    )
+    # dl_link = f'<a download="{download_filename}" id="{button_id}" href="data:file/txt;base64,{b64}"><input type="button" kind="primary" value="{button_text}"></a><br></br>'
+
+    st.markdown(dl_link, unsafe_allow_html=True)   
+
+if __name__ == '__main__':
+    client_id = st.secrets['client_id']
+    client_secret = st.secrets['client_secret']
+    redirect_uri = "http://localhost:8501"
+
+    client = GoogleOAuth2(client_id, client_secret)
+    authorization_url = asyncio.run(
+        write_authorization_url(client=client,
+                                redirect_uri=redirect_uri)
+    )
+
+    if 'token' not in st.session_state:
+        st.session_state.token=None
+
+    if st.session_state.token is None:
+        try:
+            code = st.experimental_get_query_params()['code']
+        except:
+            st.write(f'''<h1>
+                <a target="_self"
+                href="{authorization_url}">Login</a></h1>''',
+                     unsafe_allow_html=True)
+        else:
+            # Verify token is correct:
+            try:
+                token = asyncio.run(
+                    write_access_token(client=client,
+                                       redirect_uri=redirect_uri,
+                                       code=code))
+            except:
+                st.write(f'''<h1>
+                    This account is not allowed or page was refreshed.
+                    Please try again: <a target="_self"
+                    href="{authorization_url}">Login</a></h1>''',
+                         unsafe_allow_html=True)
+            else:
+                # Check if token has expired:
+                if token.is_expired():
+                    if token.is_expired():
+                        st.write(f'''<h1>
+                        Login session has ended: <a target="_self" href="{authorization_url}">
+                        Login</a></h1>
+                        ''')
+                else:
+                    st.session_state.token = token
+                    user_id, user_email = asyncio.run(
+                        get_email(client=client,
+                                  token=token['access_token'])
+                    )
+                    st.session_state.user_id = user_id
+                    st.session_state.user_email = user_email
+                    main(user_id=st.session_state.user_id,
+                         user_email=st.session_state.user_email)
+    else:
+        main(user_id=st.session_state.user_id,
+             user_email=st.session_state.user_email)
+
+
+

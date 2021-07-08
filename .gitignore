@@ -130,3 +130,7 @@ dmypy.json
 
 # Streamlit Secrets
 .streamlit/
+
+# Testing Notebooks
+.ipynb_checkpoints
+*.ipynb
