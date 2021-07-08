@@ -487,7 +487,7 @@ def download_button(
 if __name__ == '__main__':
     client_id = st.secrets['client_id']
     client_secret = st.secrets['client_secret']
-    redirect_uri = "http://localhost:8501"
+    redirect_uri = st.secrets['redirect_uri']
 
     client = GoogleOAuth2(client_id, client_secret)
     authorization_url = asyncio.run(
