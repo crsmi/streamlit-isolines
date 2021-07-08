@@ -39,34 +39,6 @@ from httpx_oauth.clients.google import GoogleOAuth2
 import re
 import uuid
 
-
-async def write_authorization_url(client,
-                                  redirect_uri):
-    authorization_url = await client.get_authorization_url(
-        redirect_uri,
-        scope=["profile", "email"],
-        extras_params={"access_type": "offline"},
-    )
-    return authorization_url
-
-
-async def write_access_token(client,
-                             redirect_uri,
-                             code):
-    token = await client.get_access_token(code, redirect_uri)
-    return token
-
-
-async def get_email(client,
-                    token):
-    user_id, user_email = await client.get_id_email(token)
-    return user_id, user_email
-
-
-
-
-
-# Original Code
 def create_coordinate_column(df):
     st.header("Select Coordinate Columns")
     st.info("Select latitude and longitude columns")
@@ -484,6 +456,30 @@ def download_button(
 
     st.markdown(dl_link, unsafe_allow_html=True)   
 
+# Google Login
+
+async def write_authorization_url(client,
+                                  redirect_uri):
+    authorization_url = await client.get_authorization_url(
+        redirect_uri,
+        scope=["profile", "email"],
+        extras_params={"access_type": "offline"},
+    )
+    return authorization_url
+
+
+async def write_access_token(client,
+                             redirect_uri,
+                             code):
+    token = await client.get_access_token(code, redirect_uri)
+    return token
+
+
+async def get_email(client,
+                    token):
+    user_id, user_email = await client.get_id_email(token)
+    return user_id, user_email
+
 if __name__ == '__main__':
     client_id = st.secrets['client_id']
     client_secret = st.secrets['client_secret']
@@ -494,7 +490,7 @@ if __name__ == '__main__':
         write_authorization_url(client=client,
                                 redirect_uri=redirect_uri)
     )
-
+    print(authorization_url)
     if 'token' not in st.session_state:
         st.session_state.token=None
 
@@ -503,7 +499,7 @@ if __name__ == '__main__':
             code = st.experimental_get_query_params()['code']
         except:
             st.write(f'''<h1>
-                <a target="_self"
+                <a target="_top"
                 href="{authorization_url}">Login</a></h1>''',
                      unsafe_allow_html=True)
         else:
@@ -516,7 +512,7 @@ if __name__ == '__main__':
             except:
                 st.write(f'''<h1>
                     This account is not allowed or page was refreshed.
-                    Please try again: <a target="_self"
+                    Please try again: <a target="_top"
                     href="{authorization_url}">Login</a></h1>''',
                          unsafe_allow_html=True)
             else:
@@ -524,7 +520,7 @@ if __name__ == '__main__':
                 if token.is_expired():
                     if token.is_expired():
                         st.write(f'''<h1>
-                        Login session has ended: <a target="_self" href="{authorization_url}">
+                        Login session has ended: <a target="_top" href="{authorization_url}">
                         Login</a></h1>
                         ''')
                 else:
