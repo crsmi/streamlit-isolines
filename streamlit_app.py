@@ -99,7 +99,9 @@ def select_time_rings():
     st.info("Select Time Rings (in minutes), separated by commas. (Max 540 mins)")
     time_rings = st.text_input("e.g. 5,10,15,30",value='5')         
     time_range_secs = ','.join([str(int(float(x)*60)) for x in time_rings.split(',')])
+    time_range_wp = ','.join([str(int(float(x)*6/5)) for x in time_rings.split(',')])
     st.write("In Seconds: " + time_range_secs)
+    st.write("WP Minutes: " + time_range_wp)
     return time_range_secs
 
 
