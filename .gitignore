@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 # Streamlit Secrets
-.streamlit/
+.streamlit/secrets.toml
 
 # Testing Notebooks
 .ipynb_checkpoints

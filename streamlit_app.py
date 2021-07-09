@@ -498,10 +498,12 @@ if __name__ == '__main__':
         try:
             code = st.experimental_get_query_params()['code']
         except:
-            st.write(f'''<h1>
-                <a target="_parent"
-                href="{authorization_url}">Login</a></h1>''',
-                     unsafe_allow_html=True)
+            # st.write(f'''<h1>
+            #     <a target="_blank"
+            #     href="{authorization_url}">Login</a></h1>''',
+            #          unsafe_allow_html=True)
+            st.write(f"[Login]({authorization_url})")
+
         else:
             # Verify token is correct:
             try:
@@ -512,7 +514,7 @@ if __name__ == '__main__':
             except:
                 st.write(f'''<h1>
                     This account is not allowed or page was refreshed.
-                    Please try again: <a target="_parent"
+                    Please try again: <a target="_blank"
                     href="{authorization_url}">Login</a></h1>''',
                          unsafe_allow_html=True)
             else:
@@ -520,7 +522,7 @@ if __name__ == '__main__':
                 if token.is_expired():
                     if token.is_expired():
                         st.write(f'''<h1>
-                        Login session has ended: <a target="_parent" href="{authorization_url}">
+                        Login session has ended: <a target="_blank" href="{authorization_url}">
                         Login</a></h1>
                         ''')
                 else:
