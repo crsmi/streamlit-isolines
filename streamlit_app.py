@@ -498,11 +498,11 @@ if __name__ == '__main__':
         try:
             code = st.experimental_get_query_params()['code']
         except:
-            # st.write(f'''<h1>
-            #     <a target="_blank"
-            #     href="{authorization_url}">Login</a></h1>''',
-            #          unsafe_allow_html=True)
-            st.write(f"[Login]({authorization_url})")
+            st.write(f'''<h1>
+                <a target="_blank"
+                href="{authorization_url}">Login</a></h1>''',
+                     unsafe_allow_html=True)
+            # st.write(f"[Login]({authorization_url})")
 
         else:
             # Verify token is correct:
