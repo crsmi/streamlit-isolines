@@ -28,7 +28,7 @@ here_api_key = st.secrets['here_api_key']
 
 
 st.set_page_config(layout="wide",page_title="Isoline Calculation",page_icon=":world_map:",initial_sidebar_state="collapsed")
-_,center,_ = st.beta_columns([1,8,2])
+_,center,_ = st.columns([1,8,2])
 with center:
     # st.title("Isochrone (Time Ring) Creation - Here Isoline Routing API v8")
     st.markdown("Upload a CSV File with coordinate columns (Latitude & Longitude)")
@@ -232,7 +232,7 @@ def main():
 
         # Create column layout
         
-        col1, _, col2 = st.beta_columns([2,.2, 4]) 
+        col1, _, col2 = st.columns([2,.2, 4]) 
 
         # Select correct Coordinates
         with col1:            
