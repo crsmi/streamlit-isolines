@@ -247,7 +247,7 @@ def main(user_id, user_email):
 
     st.write(f"You're logged in as {user_email}")
     # Original Code
-    _,center,_ = st.beta_columns([1,8,2])
+    _,center,_ = st.columns([1,8,2])
     st.sidebar.title('Isochrone (Time Ring) Creation')
     apiVersion = st.sidebar.radio('Here API Version:',['v7','v8'],0)
     with center:
@@ -265,7 +265,7 @@ def main(user_id, user_email):
 
         # Create column layout
         
-        col1, _, col2 = st.beta_columns([2,.2, 4]) 
+        col1, _, col2 = st.columns([2,.2, 4]) 
 
         # Select correct Coordinates
         with col1:            
