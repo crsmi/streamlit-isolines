@@ -3,6 +3,8 @@ import time as tim
 
 import streamlit as st
 from streamlit_folium import folium_static
+import importlib  
+from geo_selector import geo_selector
 import numpy as np
 import pandas as pd 
 # import geopandas as gpd 
@@ -25,13 +27,16 @@ from datetime import time, date, timedelta, datetime
 
 here_api_key = st.secrets['here_api_key']
 
+# State for User Input Method
+if 'input_method' not in st.session_state:
+    st.session_state['input_method'] = 'map'
 
 
 st.set_page_config(layout="wide",page_title="Isoline Calculation",page_icon=":world_map:",initial_sidebar_state="collapsed")
-_,center,_ = st.columns([1,8,2])
-with center:
+
+# with center:
     # st.title("Isochrone (Time Ring) Creation - Here Isoline Routing API v8")
-    st.markdown("Upload a CSV File with coordinate columns (Latitude & Longitude)")
+    #st.markdown("Upload a CSV File with coordinate columns (Latitude & Longitude)")
 
 def create_coordinate_column(df):
     st.header("Select Coordinate Columns")
@@ -219,8 +224,30 @@ def combine_isoline_dfs(coord_series,df_list,label_series=None):
 def main():
     st.sidebar.title('Isochrone (Time Ring) Creation')
     apiVersion = st.sidebar.radio('Here API Version:',['v7','v8'],0)
-    with center:
-        file = st.file_uploader("Choose a file") #width=25
+    file = None
+    sel_latlon = None
+    _, button1, button2, _ = st.columns([3,3,3,3])    
+    on_map_button = button2.button("Select on Map")
+    upload_file_button = button1.button("Upload File")
+    select_button_placeholder = st.empty()
+    _,center,_ = st.columns([1,8,2])
+    select_placeholder = center.empty()
+    if upload_file_button:
+        st.session_state.input_method = 'file'
+    if on_map_button:
+        st.session_state.input_method = 'map'
+        
+    if st.session_state.input_method == 'file':        
+        with select_placeholder:
+            st.markdown("Upload a CSV File with coordinate columns (Latitude & Longitude)")
+            file = st.file_uploader("Choose a file") #width=25                  
+    else:
+        with select_placeholder.container():                    
+            sel_latlon = geo_selector() 
+                
+
+    print(st.session_state.input_method)        
+    col1, _, col2 = st.columns([2,.2, 4]) 
     if file is not None:
         file.seek(0)
         with center:        
@@ -228,11 +255,7 @@ def main():
                 df = pd.read_csv(file, low_memory=False, dtype=str)
             st.success('Done!')
             st.write(df.head())
-            st.write(df.shape)
-
-        # Create column layout
-        
-        col1, _, col2 = st.columns([2,.2, 4]) 
+            st.write(df.shape) 
 
         # Select correct Coordinates
         with col1:            
@@ -245,7 +268,13 @@ def main():
             if st.checkbox('Would you like to choose a column to use for labels?'):
                 label_series = df[add_label_column(df)]
                 
-
+    elif sel_latlon is not None:
+        latlon_str = f"{sel_latlon['lat']},{sel_latlon['lng']}"
+        center.write(latlon_str)
+        df_coords = pd.DataFrame({'Name':['Map Selected Point'],'latlon': [latlon_str]})
+        st.write(df_coords["latlon"].rename('coordinates').head())
+    
+    if (sel_latlon or file):
         # Select Time Rings Wanted
         with col2:
             time_range_secs = select_time_rings()
@@ -323,10 +352,10 @@ def main():
                 #     #st.markdown(download_shapefile(combined_catchments, settings_dict, shp_name), unsafe_allow_html=True)
             
 
-            # TODO: Show Response Info here
-            # with col2:                
-            #     with st.beta_expander("See response to first request."):
-            #         st.json(point_response_list[0][0].json())
+                # TODO: Show Response Info here
+                # with col2:                
+                #     with st.beta_expander("See response to first request."):
+                #         st.json(point_response_list[0][0].json())
 
 # def save_temp(df, settings, responses):
 #     # Save Settings
