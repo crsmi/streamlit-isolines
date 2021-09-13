@@ -3,3 +3,4 @@ geopandas
 streamlit-folium
 flexpolyline
 pygeos
+streamlit-geo-selector
