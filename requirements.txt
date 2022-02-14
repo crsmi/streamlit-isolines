@@ -1,6 +1,6 @@
-streamlit
-geopandas
-streamlit-folium
-flexpolyline
+streamlit==0.88.0
+geopandas==0.9.0
+streamlit-folium==0.4.0
+flexpolyline==0.1.0
 pygeos
-httpx-oauth
+httpx-oauth==0.3.5
